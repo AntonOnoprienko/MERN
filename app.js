@@ -1,8 +1,11 @@
-import express from "express";
-import config from "config";
-import mongoose from "mongoose";
-
+const express = require("express");
+const config = require("config");
+const mongoose = require("mongoose");
 const app = express(); //Присваиваем express
+
+app.use(express.json({ extended: true }));
+
+app.use("/api/auth", require("./routes/auth.routes"));
 
 const PORT = config.get("port") || 5000; // Назначаем порт
 
