@@ -3,6 +3,8 @@ const bcrypt = require("bcryptjs");
 const { check, validationResult } = require("express-validator");
 const User = require("../models/User");
 const router = Router();
+const jwt = require("jsonwebtoken");
+const config = require("config");
 
 // /api/auth/register
 router.post(
@@ -49,11 +51,45 @@ router.post(
 );
 
 // /api/auth/login
-router.post("/login", async (req, res) => {
-  try {
-  } catch (e) {
-    res.status(500).json({ message: "Что то пошло не так, попробуйте снова" });
+router.post(
+  "/login",
+  [
+    check("email", "Введите коректный email").normalizeEmail().isEmail(),
+    check("password", "Ведите пароль").exists(),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          errors: errors.array(),
+          message: "Некорректный данные при  входе в систему",
+        });
+      }
+      const { email, password } = req.body;
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({
+          message: "Пользователь не найден!",
+        });
+      }
+      const isMath = await bcrypt.compare(password, user.password);
+      if (!isMath) {
+        return res.status(400).json({
+          message: "Пользователь или пароль не верный, попробуйте снова",
+        });
+      }
+      const token = jwt.sign({ iserId: user.id }, config.get("jwtSecret"), {
+        expiresIn: "1h",
+      });
+      res.json({ token, userId: user.id });
+    } catch (e) {
+      res
+        .status(500)
+        .json({ message: "Что-то пошло не так, попробуйте снова" });
+    }
   }
-});
+);
 
 module.exports = router;
